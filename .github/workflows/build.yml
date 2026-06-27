@@ -40,6 +40,7 @@ jobs:
           # 方案：完全禁用线程，彻底避免 pthreads/w32threads 依赖
           # 硬件加速（D3D11VA/DXVA2）在 GPU 执行，不受影响
           # 软件解码变慢但用户主要用硬解
+          # 启用 swscale 用于 YUV → RGB 转换
           ./configure \
             --enable-shared \
             --disable-static \
@@ -60,6 +61,7 @@ jobs:
             --enable-hwaccel=h264_dxva2 \
             --enable-protocol=file \
             --enable-swresample \
+            --enable-swscale \
             --arch=x86_64 \
             --target-os=mingw64 \
             --extra-cflags="-O2 -s -DNDEBUG" \
@@ -81,6 +83,7 @@ jobs:
           cp ffmpeg-src/libavcodec/avcodec-*.dll output/bin/ 2>/dev/null || true
           cp ffmpeg-src/libavutil/avutil-*.dll output/bin/ 2>/dev/null || true
           cp ffmpeg-src/libswresample/swresample-*.dll output/bin/ 2>/dev/null || true
+          cp ffmpeg-src/libswscale/swscale-*.dll output/bin/ 2>/dev/null || true
 
           # 复制 MinGW 运行时 DLL（必需依赖）
           cp /mingw64/bin/libwinpthread-1.dll output/bin/ 2>/dev/null || true
@@ -91,12 +94,14 @@ jobs:
           cp ffmpeg-src/libavcodec/avcodec.lib output/lib/ 2>/dev/null || true
           cp ffmpeg-src/libavutil/avutil.lib output/lib/ 2>/dev/null || true
           cp ffmpeg-src/libswresample/swresample.lib output/lib/ 2>/dev/null || true
+          cp ffmpeg-src/libswscale/swscale.lib output/lib/ 2>/dev/null || true
 
           # 只复制 .h 头文件（不复制 .c/.o/.d/Makefile 等编译中间文件）
-          mkdir -p output/include/libavcodec output/include/libavutil output/include/libswresample
+          mkdir -p output/include/libavcodec output/include/libavutil output/include/libswresample output/include/libswscale
           find ffmpeg-src/libavcodec -name "*.h" -exec cp {} output/include/libavcodec/ \;
           find ffmpeg-src/libavutil -name "*.h" -exec cp {} output/include/libavutil/ \;
           find ffmpeg-src/libswresample -name "*.h" -exec cp {} output/include/libswresample/ \;
+          find ffmpeg-src/libswscale -name "*.h" -exec cp {} output/include/libswscale/ \;
 
           echo "=== 编译结果 ==="
           echo "DLL 文件:"
