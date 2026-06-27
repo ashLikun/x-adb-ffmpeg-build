@@ -1,0 +1,79 @@
+name: Build Minimal FFmpeg
+
+on:
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-nasm
+            mingw-w64-x86_64-yasm
+            make
+            git
+
+      - name: Download FFmpeg Source
+        shell: msys2 {0}
+        run: |
+          git clone --depth 1 --branch n7.0 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+
+      - name: Configure FFmpeg
+        shell: msys2 {0}
+        run: |
+          cd ffmpeg-src
+          ./configure \
+            --prefix=/mingw64 \
+            --enable-shared \
+            --disable-static \
+            --disable-doc \
+            --disable-ffmpeg \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --disable-network \
+            --disable-everything \
+            --enable-decoder=h264 \
+            --enable-parser=h264 \
+            --enable-demuxer=h264 \
+            --enable-hwaccel=h264_d3d11va \
+            --enable-hwaccel=h264_dxva2 \
+            --enable-protocol=file \
+            --enable-filter=scale \
+            --arch=x86_64 \
+            --target-os=mingw64 \
+            --toolchain=mingw64 \
+            --extra-cflags="-O2 -s" \
+            --extra-ldflags="-Wl,--gc-sections"
+
+      - name: Build FFmpeg
+        shell: msys2 {0}
+        run: |
+          cd ffmpeg-src
+          make -j$(nproc)
+
+      - name: Collect DLLs
+        shell: msys2 {0}
+        run: |
+          mkdir -p output
+          cp ffmpeg-src/libavcodec/*.dll output/ 2>/dev/null || true
+          cp ffmpeg-src/libavutil/*.dll output/ 2>/dev/null || true
+          cp ffmpeg-src/libswresample/*.dll output/ 2>/dev/null || true
+          cp ffmpeg-src/libavcodec/*.lib output/ 2>/dev/null || true
+          cp ffmpeg-src/libavutil/*.lib output/ 2>/dev/null || true
+          cp ffmpeg-src/libswresample/*.lib output/ 2>/dev/null || true
+          echo "=== 编译结果 ==="
+          ls -lh output/
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-minimal-windows-x64
+          path: output/
+          retention-days: 30
