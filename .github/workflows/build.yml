@@ -23,13 +23,12 @@ jobs:
       - name: Download FFmpeg Source
         shell: msys2 {0}
         run: |
-          git clone --depth 1 --branch n7.0 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+          git clone --depth 1 --branch n7.1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
       - name: Configure FFmpeg
         shell: msys2 {0}
         run: |
           cd ffmpeg-src
-          # 设置编译器路径
           export PATH="/mingw64/bin:$PATH"
           export CC=gcc
           export CXX=g++
@@ -47,6 +46,7 @@ jobs:
             --disable-ffprobe \
             --disable-network \
             --disable-everything \
+            --disable-autodetect \
             --enable-decoder=h264 \
             --enable-parser=h264 \
             --enable-demuxer=h264 \
@@ -54,10 +54,11 @@ jobs:
             --enable-hwaccel=h264_dxva2 \
             --enable-protocol=file \
             --enable-filter=scale \
+            --enable-swscale \
             --arch=x86_64 \
             --target-os=mingw64 \
-            --extra-cflags="-O2 -s" \
-            --extra-ldflags="-Wl,--gc-sections"
+            --extra-cflags="-O2 -s -DNDEBUG" \
+            --extra-ldflags="-Wl,--gc-sections -s"
 
       - name: Build FFmpeg
         shell: msys2 {0}
@@ -65,21 +66,32 @@ jobs:
           cd ffmpeg-src
           make -j$(nproc)
 
-      - name: Collect DLLs
+      - name: Collect Files
         shell: msys2 {0}
         run: |
-          mkdir -p output
-          cp ffmpeg-src/libavcodec/*.dll output/ 2>/dev/null || true
-          cp ffmpeg-src/libavutil/*.dll output/ 2>/dev/null || true
-          cp ffmpeg-src/libswresample/*.dll output/ 2>/dev/null || true
-          cp ffmpeg-src/libavcodec/*.lib output/ 2>/dev/null || true
-          cp ffmpeg-src/libavutil/*.lib output/ 2>/dev/null || true
-          cp ffmpeg-src/libswresample/*.lib output/ 2>/dev/null || true
+          mkdir -p output/dll output/lib output/include
+
+          # DLL 文件
+          cp ffmpeg-src/libavcodec/*.dll output/dll/ 2>/dev/null || true
+          cp ffmpeg-src/libavutil/*.dll output/dll/ 2>/dev/null || true
+          cp ffmpeg-src/libswscale/*.dll output/dll/ 2>/dev/null || true
+
+          # lib 文件
+          cp ffmpeg-src/libavcodec/*.lib output/lib/ 2>/dev/null || true
+          cp ffmpeg-src/libavutil/*.lib output/lib/ 2>/dev/null || true
+          cp ffmpeg-src/libswscale/*.lib output/lib/ 2>/dev/null || true
+
+          # 头文件
+          cp -r ffmpeg-src/libavcodec output/include/ 2>/dev/null || true
+          cp -r ffmpeg-src/libavutil output/include/ 2>/dev/null || true
+          cp -r ffmpeg-src/libswscale output/include/ 2>/dev/null || true
+
           echo "=== 编译结果 ==="
-          ls -lh output/
+          echo "DLL 文件:"
+          ls -lh output/dll/
           echo ""
-          echo "=== DLL 大小 ==="
-          du -sh output/*.dll
+          echo "DLL 总大小:"
+          du -sh output/dll/*.dll | awk '{sum+=$1} END {print sum " KB"}'
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
