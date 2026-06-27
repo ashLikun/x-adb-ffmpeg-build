@@ -37,9 +37,8 @@ jobs:
           export RANLIB=ranlib
           export STRIP=strip
 
-          # 方案：完全禁用线程，彻底避免 pthreads/w32threads 依赖
-          # 硬件加速（D3D11VA/DXVA2）在 GPU 执行，不受影响
-          # 软件解码变慢但用户主要用硬解
+          # 启用 w32threads（Windows 原生线程）支持硬件加速
+          # D3D11VA/DXVA2 需要线程支持才能工作
           # 启用 swscale 用于 YUV → RGB 转换
           ./configure \
             --enable-shared \
@@ -52,7 +51,7 @@ jobs:
             --disable-everything \
             --disable-autodetect \
             --disable-pthreads \
-            --disable-w32threads \
+            --enable-w32threads \
             --disable-os2threads \
             --enable-decoder=h264,aac,opus \
             --enable-parser=h264,aac,opus \
@@ -85,10 +84,9 @@ jobs:
           cp ffmpeg-src/libswresample/swresample-*.dll output/bin/ 2>/dev/null || true
           cp ffmpeg-src/libswscale/swscale-*.dll output/bin/ 2>/dev/null || true
 
-          # 复制 MinGW 运行时 DLL（必需依赖）
-          cp /mingw64/bin/libwinpthread-1.dll output/bin/ 2>/dev/null || true
+          # 使用 w32threads 可能不需要 MinGW 运行时 DLL
+          # 但保险起见仍然复制（如果存在的话）
           cp /mingw64/bin/libgcc_s_seh-1.dll output/bin/ 2>/dev/null || true
-          cp /mingw64/bin/libstdc++-6.dll output/bin/ 2>/dev/null || true
 
           # lib 文件
           cp ffmpeg-src/libavcodec/avcodec.lib output/lib/ 2>/dev/null || true
