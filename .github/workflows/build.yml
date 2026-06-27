@@ -56,6 +56,8 @@ jobs:
             --enable-decoder=h264,aac,opus \
             --enable-parser=h264,aac,opus \
             --enable-demuxer=h264 \
+            --enable-d3d11va \
+            --enable-dxva2 \
             --enable-hwaccel=h264_d3d11va \
             --enable-hwaccel=h264_dxva2 \
             --enable-protocol=file \
