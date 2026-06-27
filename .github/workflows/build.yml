@@ -37,6 +37,7 @@ jobs:
           export RANLIB=ranlib
           export STRIP=strip
 
+          # 方案A：视频(h264) + 音频(aac,opus) + 重采样
           ./configure \
             --enable-shared \
             --disable-static \
@@ -47,14 +48,13 @@ jobs:
             --disable-network \
             --disable-everything \
             --disable-autodetect \
-            --enable-decoder=h264 \
-            --enable-parser=h264 \
+            --enable-decoder=h264,aac,opus \
+            --enable-parser=h264,aac,opus \
             --enable-demuxer=h264 \
             --enable-hwaccel=h264_d3d11va \
             --enable-hwaccel=h264_dxva2 \
             --enable-protocol=file \
-            --enable-filter=scale \
-            --enable-swscale \
+            --enable-swresample \
             --arch=x86_64 \
             --target-os=mingw64 \
             --extra-cflags="-O2 -s -DNDEBUG" \
@@ -69,29 +69,30 @@ jobs:
       - name: Collect Files
         shell: msys2 {0}
         run: |
-          mkdir -p output/dll output/lib output/include
+          mkdir -p output
 
-          # DLL 文件
-          cp ffmpeg-src/libavcodec/*.dll output/dll/ 2>/dev/null || true
-          cp ffmpeg-src/libavutil/*.dll output/dll/ 2>/dev/null || true
-          cp ffmpeg-src/libswscale/*.dll output/dll/ 2>/dev/null || true
+          # 只复制带版本号的 DLL（避免重复）
+          cp ffmpeg-src/libavcodec/avcodec-*.dll output/ 2>/dev/null || true
+          cp ffmpeg-src/libavutil/avutil-*.dll output/ 2>/dev/null || true
+          cp ffmpeg-src/libswresample/swresample-*.dll output/ 2>/dev/null || true
 
           # lib 文件
-          cp ffmpeg-src/libavcodec/*.lib output/lib/ 2>/dev/null || true
-          cp ffmpeg-src/libavutil/*.lib output/lib/ 2>/dev/null || true
-          cp ffmpeg-src/libswscale/*.lib output/lib/ 2>/dev/null || true
+          cp ffmpeg-src/libavcodec/avcodec.lib output/ 2>/dev/null || true
+          cp ffmpeg-src/libavutil/avutil.lib output/ 2>/dev/null || true
+          cp ffmpeg-src/libswresample/swresample.lib output/ 2>/dev/null || true
 
           # 头文件
+          mkdir -p output/include
           cp -r ffmpeg-src/libavcodec output/include/ 2>/dev/null || true
           cp -r ffmpeg-src/libavutil output/include/ 2>/dev/null || true
-          cp -r ffmpeg-src/libswscale output/include/ 2>/dev/null || true
+          cp -r ffmpeg-src/libswresample output/include/ 2>/dev/null || true
 
           echo "=== 编译结果 ==="
           echo "DLL 文件:"
-          ls -lh output/dll/
+          ls -lh output/*.dll 2>/dev/null || echo "未找到 DLL"
           echo ""
           echo "DLL 总大小:"
-          du -sh output/dll/*.dll | awk '{sum+=$1} END {print sum " KB"}'
+          du -ch output/*.dll 2>/dev/null | tail -1 || echo "无法计算"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
