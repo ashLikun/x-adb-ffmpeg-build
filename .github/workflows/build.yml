@@ -29,8 +29,16 @@ jobs:
         shell: msys2 {0}
         run: |
           cd ffmpeg-src
+          # 设置编译器路径
+          export PATH="/mingw64/bin:$PATH"
+          export CC=gcc
+          export CXX=g++
+          export AR=ar
+          export NM=nm
+          export RANLIB=ranlib
+          export STRIP=strip
+
           ./configure \
-            --prefix=/mingw64 \
             --enable-shared \
             --disable-static \
             --disable-doc \
@@ -48,7 +56,6 @@ jobs:
             --enable-filter=scale \
             --arch=x86_64 \
             --target-os=mingw64 \
-            --toolchain=mingw64 \
             --extra-cflags="-O2 -s" \
             --extra-ldflags="-Wl,--gc-sections"
 
@@ -70,6 +77,9 @@ jobs:
           cp ffmpeg-src/libswresample/*.lib output/ 2>/dev/null || true
           echo "=== 编译结果 ==="
           ls -lh output/
+          echo ""
+          echo "=== DLL 大小 ==="
+          du -sh output/*.dll
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
