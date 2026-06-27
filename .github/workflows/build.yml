@@ -37,9 +37,9 @@ jobs:
           export RANLIB=ranlib
           export STRIP=strip
 
-          # 方案A：视频(h264) + 音频(aac,opus) + 重采样
-          # 使用 w32threads + 完全静态链接，避免 MinGW 运行时依赖
-          # 关键：-Wl,-Bstatic -lpthread 强制静态链接 winpthreads
+          # 方案：完全禁用线程，彻底避免 pthreads/w32threads 依赖
+          # 硬件加速（D3D11VA/DXVA2）在 GPU 执行，不受影响
+          # 软件解码变慢但用户主要用硬解
           ./configure \
             --enable-shared \
             --disable-static \
@@ -51,7 +51,8 @@ jobs:
             --disable-everything \
             --disable-autodetect \
             --disable-pthreads \
-            --enable-w32threads \
+            --disable-w32threads \
+            --disable-os2threads \
             --enable-decoder=h264,aac,opus \
             --enable-parser=h264,aac,opus \
             --enable-demuxer=h264 \
@@ -62,8 +63,8 @@ jobs:
             --arch=x86_64 \
             --target-os=mingw64 \
             --extra-cflags="-O2 -s -DNDEBUG" \
-            --extra-ldflags="-Wl,--gc-sections -s -static -static-libgcc -static-libstdc++ -Wl,-Bstatic" \
-            --extra-libs="-lpthread -lws2_32 -lole32 -luser32 -lbcrypt"
+            --extra-ldflags="-Wl,--gc-sections -s" \
+            --extra-libs="-lws2_32 -lole32 -luser32 -lbcrypt"
 
       - name: Build FFmpeg
         shell: msys2 {0}
