@@ -69,34 +69,40 @@ jobs:
       - name: Collect Files
         shell: msys2 {0}
         run: |
-          mkdir -p output
+          mkdir -p output/bin output/lib output/include
 
           # 只复制带版本号的 DLL（避免重复）
-          cp ffmpeg-src/libavcodec/avcodec-*.dll output/ 2>/dev/null || true
-          cp ffmpeg-src/libavutil/avutil-*.dll output/ 2>/dev/null || true
-          cp ffmpeg-src/libswresample/swresample-*.dll output/ 2>/dev/null || true
+          cp ffmpeg-src/libavcodec/avcodec-*.dll output/bin/ 2>/dev/null || true
+          cp ffmpeg-src/libavutil/avutil-*.dll output/bin/ 2>/dev/null || true
+          cp ffmpeg-src/libswresample/swresample-*.dll output/bin/ 2>/dev/null || true
 
           # lib 文件
-          cp ffmpeg-src/libavcodec/avcodec.lib output/ 2>/dev/null || true
-          cp ffmpeg-src/libavutil/avutil.lib output/ 2>/dev/null || true
-          cp ffmpeg-src/libswresample/swresample.lib output/ 2>/dev/null || true
+          cp ffmpeg-src/libavcodec/avcodec.lib output/lib/ 2>/dev/null || true
+          cp ffmpeg-src/libavutil/avutil.lib output/lib/ 2>/dev/null || true
+          cp ffmpeg-src/libswresample/swresample.lib output/lib/ 2>/dev/null || true
 
-          # 头文件
-          mkdir -p output/include
-          cp -r ffmpeg-src/libavcodec output/include/ 2>/dev/null || true
-          cp -r ffmpeg-src/libavutil output/include/ 2>/dev/null || true
-          cp -r ffmpeg-src/libswresample output/include/ 2>/dev/null || true
+          # 只复制 .h 头文件（不复制 .c/.o/.d/Makefile 等编译中间文件）
+          mkdir -p output/include/libavcodec output/include/libavutil output/include/libswresample
+          find ffmpeg-src/libavcodec -name "*.h" -exec cp {} output/include/libavcodec/ \;
+          find ffmpeg-src/libavutil -name "*.h" -exec cp {} output/include/libavutil/ \;
+          find ffmpeg-src/libswresample -name "*.h" -exec cp {} output/include/libswresample/ \;
 
           echo "=== 编译结果 ==="
           echo "DLL 文件:"
-          ls -lh output/*.dll 2>/dev/null || echo "未找到 DLL"
+          ls -lh output/bin/*.dll 2>/dev/null || echo "未找到 DLL"
           echo ""
           echo "DLL 总大小:"
-          du -ch output/*.dll 2>/dev/null | tail -1 || echo "无法计算"
+          du -ch output/bin/*.dll 2>/dev/null | tail -1 || echo "无法计算"
+          echo ""
+          echo "头文件数量:"
+          find output/include -name "*.h" | wc -l
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-minimal-windows-x64
-          path: output/
+          path: |
+            output/bin/
+            output/lib/
+            output/include/
           retention-days: 30
