@@ -38,6 +38,7 @@ jobs:
           export STRIP=strip
 
           # 方案A：视频(h264) + 音频(aac,opus) + 重采样
+          # 静态链接 MinGW 运行时，避免依赖 libwinpthread-1.dll 等
           ./configure \
             --enable-shared \
             --disable-static \
@@ -57,8 +58,8 @@ jobs:
             --enable-swresample \
             --arch=x86_64 \
             --target-os=mingw64 \
-            --extra-cflags="-O2 -s -DNDEBUG" \
-            --extra-ldflags="-Wl,--gc-sections -s"
+            --extra-cflags="-O2 -s -DNDEBUG -static-libgcc -static-libstdc++" \
+            --extra-ldflags="-Wl,--gc-sections -s -static-libgcc -static-libstdc++ -static"
 
       - name: Build FFmpeg
         shell: msys2 {0}
